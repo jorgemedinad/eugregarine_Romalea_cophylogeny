@@ -1,0 +1,17 @@
+s/Romalea_microptera_Alabama_Village_Point/microptera_1/
+s/Romalea_microptera_Natures_Way/microptera_2/
+s/Romalea_microptera_Saint_Marks/microptera_3/
+s/Romalea_microptera_Florida_Burns_Lake/microptera_4/
+s/Romalea_microptera_Florida_Highlands_Hammock/microptera_5/
+s/Romalea_microptera_Texas_Sam_Houston/microptera_6/
+s/Taeniopoda_centurio_Hidalgo_Mesa_Limatitla/centurio/
+s/Taeniopoda_auricornis_Veracruz_Tepetlan/auricornis_1/
+s/Taeniopoda_auricornis_Veracruz_Xalapa/auricornis_2/
+s/Taeniopoda_obscura_Yucatan_El_Cuyo/obscura_1/
+s/Taeniopoda_obscura_Yucatan_Panaba/obscura_2/
+s/Taeniopoda_reticulata_Heredia_La_Selva/reticulata/
+s/Taeniopoda_varipennis_Puntarenas_Quepos/varipennis/
+s/Taeniopoda_tamaulipensis_Tamaulipas_El_Madrono/tamaulipensis/
+s/Taeniopoda_eques_Hidalgo_1/eques/
+s/Taeniopoda_picticornis_Veracruz_Paseo_Ahuehuetes/picticornis/
+s/Xyleus_discoideus_Guerrero_Chutla_de_Nava/Xyleus/

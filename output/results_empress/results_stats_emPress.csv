@@ -1,0 +1,6 @@
+"cost_scheme","mean_pvalue","total_cospeciation","total_transfer","total_duplication","total_loss","total_time_inconsistency"
+"d1_t1_l1",0.09134856,173,779,48,0,599
+"d1_t8_l1",0.05270724,432,48,520,2365,1166
+"d2_t1_l2",0.22581404,173,787,40,0,599
+"d2_t4_l1",0.06039954,358,443,199,574,190
+"d4_t1_l1",0.45190826,173,787,40,0,599

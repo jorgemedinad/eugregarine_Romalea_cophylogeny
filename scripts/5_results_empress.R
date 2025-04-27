@@ -1,18 +1,33 @@
+#############################################################
+# Title: Analyze Empress Reconciliations and Generate Event Visualizations
+# Creator: Jorge Medina-Duran
+# Date: Apr/27/2025
+#
+# Description:
+# This script summarizes the outputs of Empress reconciliations and p-value tests.
+# It performs:
+# - Extracts p-values and event types
+# - Computes event counts, time inconsistencies, and ratios
+# - Saves summary tables
+# - Generates event and ratio visualizations
+#############################################################
 
+# Load required libraries
 library(ape)
 library(ggplot2)
 library(tidyr)
 
-# Set working directory
-output <- "C:/Users/beto2/Documents/cophylogeny_project/output/"
-results_dir <- paste0(output, "/results_empress")
-setwd(results_dir)
+#### Define paths ----
+output <- "YOUR_PATH/output/"
+results_dir <- paste0(output, "results_empress/")
+dir.create(results_dir, showWarnings = FALSE, recursive = TRUE)
+# setwd(results_dir)  # Optional: usually better to work without changing working directory
 
-# Define cost schemes and number of replicates
+#### Define cost schemes and parameters ----
 cost_schemes <- c("d1_t1_l1", "d1_t8_l1", "d2_t1_l2", "d2_t4_l1", "d4_t1_l1")
-n_replicates <- 50  # Fixed at 50 replicates
+n_replicates <- 50
 
-# Load host and parasite trees (single phylogeny for all replicates)
+# Load trees
 parasite_tree <- read.tree(paste0(output, "trimmed_tree/gregarine_tree_trim.tre"))
 host_tree <- read.tree(paste0(output, "trimmed_tree/romalea_tree_trim.tre"))
 
@@ -21,52 +36,47 @@ node_age_hosts <- node.depth.edgelength(host_tree)
 node_age_hosts <- max(node_age_hosts) - node_age_hosts
 names(node_age_hosts) <- 1:length(node_age_hosts)
 
+#### Initialize result data frames ----
 res_stats <- data.frame()
 all_pvalues <- data.frame()
 event_data <- data.frame()
 
+#### Process reconciliations and p-values ----
 for (costs in cost_schemes) {
   list_pvalues <- c()
-  print(costs)
+  print(paste("Processing cost scheme:", costs))
   
   for (rep in 1:n_replicates) {
-    recon_file <- paste0("reconciliation_", costs, "_associations_", rep, ".csv")
-    res_file <- paste0("res_", costs, "_associations_", rep, ".svg")
+    recon_file <- paste0(results_dir, "reconciliation_", costs, "_associations_", rep, ".csv")
+    res_file <- paste0(results_dir, "res_", costs, "_associations_", rep, ".svg")
     
     if (file.exists(res_file) && file.exists(recon_file)) {
-      res <- read.table(res_file, comment.char = "", fill=TRUE, sep=";")
+      # Extract p-value from SVG
+      res <- read.table(res_file, comment.char = "", fill = TRUE, sep = ";")
+      res_pvalue <- as.numeric(gsub(" -->", "", gsub("    <!-- p-value = ", "", res$V1[grep("p-value", res$V1)])))
       
-      res_pvalue <- res$V1[grep("p-value", res$V1)]
-      res_pvalue <- gsub("    <!-- p-value = ", "", res_pvalue)
-      res_pvalue <- as.numeric(gsub(" -->", "", res_pvalue))
-      
-      recon <- read.csv(recon_file, stringsAsFactors=FALSE)
+      # Load reconciliation table
+      recon <- read.csv(recon_file, stringsAsFactors = FALSE)
       colnames(recon) <- c("parasite", "host", "event", "node_frequency", "event_frequency")
       
+      # Sanity check on frequencies
       if (!all(recon$node_frequency >= recon$event_frequency)) {
-        print("problem in event frequencies")
+        warning("Problem in event frequencies!")
       }
       
-      # Convert node names (_pX, _hX) to numeric indices
-      for (i in 1:nrow(recon)) {
-        if (grepl("^_p", recon$parasite[i])) {
-          recon$parasite[i] <- as.numeric(gsub("_p", "", recon$parasite[i])) + Ntip(parasite_tree) + 1
-        } else {
-          recon$parasite[i] <- which(parasite_tree$tip.label == recon$parasite[i])
-        }
-        
-        if (grepl("^_h", recon$host[i])) {
-          recon$host[i] <- as.numeric(gsub("_h", "", recon$host[i])) + Ntip(host_tree) + 1
-        } else {
-          recon$host[i] <- which(host_tree$tip.label == recon$host[i])
-        }
-      }
+      # Rename parasite and host nodes
+      recon$parasite <- sapply(recon$parasite, function(x) {
+        if (grepl("^_p", x)) as.numeric(gsub("_p", "", x)) + Ntip(parasite_tree) + 1
+        else which(parasite_tree$tip.label == x)
+      })
+      recon$host <- sapply(recon$host, function(x) {
+        if (grepl("^_h", x)) as.numeric(gsub("_h", "", x)) + Ntip(host_tree) + 1
+        else which(host_tree$tip.label == x)
+      })
       
-      # Time consistency checks
-      recon$age_min <- NA
-      recon$age_max <- NA
-      
-      for (i in 1:nrow(recon)) {
+      # Compute time consistency
+      recon$age_min <- recon$age_max <- NA
+      for (i in seq_len(nrow(recon))) {
         if (recon$event[i] == "Contemporaneous") {
           recon$age_min[i] <- 0
           recon$age_max[i] <- 0
@@ -77,148 +87,110 @@ for (costs in cost_schemes) {
         }
         if (recon$event[i] %in% c("Transfer", "Loss", "Duplication")) {
           previous_node <- which(parasite_tree$edge[,2] == recon$parasite[i])
-          if (length(previous_node) == 1) {
-            recon$age_max[i] <- max(recon$age_max[which(recon$parasite == parasite_tree$edge[previous_node,1])])
+          recon$age_max[i] <- if (length(previous_node) == 1) {
+            max(recon$age_max[which(recon$parasite == parasite_tree$edge[previous_node,1])])
           } else {
-            recon$age_max[i] <- max(node_age_hosts)
+            max(node_age_hosts)
           }
           recon$age_min[i] <- node_age_hosts[recon$host[i]]
         }
       }
-      
       recon$diff_age <- recon$age_max - recon$age_min
       
-      # Ensure all event types exist
+      # Count events
       all_events <- c("Contemporaneous", "Cospeciation", "Transfer", "Duplication", "Loss")
-      event_counts <- table(recon$event)
-      event_counts <- as.numeric(event_counts[all_events])
-      names(event_counts) <- all_events
+      event_counts <- table(factor(recon$event, levels = all_events))
       
-      # Replace NA values with 0 (for missing event types)
-      event_counts[is.na(event_counts)] <- 0
+      # Store event data
+      list_pvalues <- rbind(list_pvalues, c(rep, res_pvalue, as.numeric(event_counts), sum(recon$diff_age < 0)))
       
-      # Store results correctly
-      list_pvalues <- rbind(list_pvalues, c(rep, res_pvalue, event_counts, length(which(recon$diff_age < 0))))
-      
-      event_data <- rbind(event_data, data.frame(cost_scheme=costs, replicate=rep, pvalue=res_pvalue,
-                                                 cospeciation=event_counts["Cospeciation"],
-                                                 transfer=event_counts["Transfer"],
-                                                 duplication=event_counts["Duplication"],
-                                                 loss=event_counts["Loss"],
-                                                 time_inconsistency=length(which(recon$diff_age < 0))))
+      event_data <- rbind(event_data, data.frame(
+        cost_scheme = costs,
+        replicate = rep,
+        pvalue = res_pvalue,
+        cospeciation = event_counts["Cospeciation"],
+        transfer = event_counts["Transfer"],
+        duplication = event_counts["Duplication"],
+        loss = event_counts["Loss"],
+        time_inconsistency = sum(recon$diff_age < 0)
+      ))
     }
   }
   
-  list_pvalues <- data.frame(list_pvalues)
+  # Save replicate-level results
+  list_pvalues <- as.data.frame(list_pvalues)
   colnames(list_pvalues) <- c("replicate", "pvalue", "Contemporaneous", "Cospeciation", "Transfer", "Duplication", "Loss", "time_inconsistency")
-  write.table(list_pvalues, paste0(results_dir, "/results_emPress_", costs, ".csv"), sep=",", row.names=FALSE)
+  write.table(list_pvalues, paste0(results_dir, "results_emPress_", costs, ".csv"), sep = ",", row.names = FALSE)
   
-  # Summarize statistics for this cost scheme
-  res_stats <- rbind(res_stats, data.frame(cost_scheme=costs,
-                                           mean_pvalue=mean(as.numeric(list_pvalues$pvalue), na.rm=TRUE),
-                                           total_cospeciation=sum(as.numeric(list_pvalues$Cospeciation), na.rm=TRUE),
-                                           total_transfer=sum(as.numeric(list_pvalues$Transfer), na.rm=TRUE),
-                                           total_duplication=sum(as.numeric(list_pvalues$Duplication), na.rm=TRUE),
-                                           total_loss=sum(as.numeric(list_pvalues$Loss), na.rm=TRUE),
-                                           total_time_inconsistency=sum(as.numeric(list_pvalues$time_inconsistency), na.rm=TRUE)))
+  # Summarize overall
+  res_stats <- rbind(res_stats, data.frame(
+    cost_scheme = costs,
+    mean_pvalue = mean(as.numeric(list_pvalues$pvalue), na.rm = TRUE),
+    total_cospeciation = sum(as.numeric(list_pvalues$Cospeciation)),
+    total_transfer = sum(as.numeric(list_pvalues$Transfer)),
+    total_duplication = sum(as.numeric(list_pvalues$Duplication)),
+    total_loss = sum(as.numeric(list_pvalues$Loss)),
+    total_time_inconsistency = sum(as.numeric(list_pvalues$time_inconsistency))
+  ))
   
-  all_pvalues <- rbind(all_pvalues, data.frame(cost_scheme=costs, pvalue=list_pvalues$pvalue))
+  all_pvalues <- rbind(all_pvalues, data.frame(cost_scheme = costs, pvalue = list_pvalues$pvalue))
 }
 
-colnames(res_stats) <- c("cost_scheme", "mean_pvalue", "total_cospeciation", "total_transfer", "total_duplication", "total_loss", "total_time_inconsistency")
-write.table(res_stats, paste0(results_dir, "/results_stats_emPress.csv"), sep=",", row.names=FALSE)
+# Save overall stats
+write.table(res_stats, paste0(results_dir, "results_stats_emPress.csv"), sep = ",", row.names = FALSE)
+write.table(all_pvalues, paste0(results_dir, "pvalue_distribution.csv"), sep = ",", row.names = FALSE)
 
-# Save p-value distributions
-write.table(all_pvalues, paste0(results_dir, "/pvalue_distribution.csv"), sep=",", row.names=FALSE)
-
-
-# Add new columns
+#### Prepare event data for plotting ----
 event_data$signif <- event_data$pvalue <= 0.05
-event_data$time_inconsistency <- NULL
-rownames(event_data) <- NULL
-event_data$transfer[is.na(event_data$transfer)] <- 0
-event_data$ratio <- event_data$transfer/event_data$cospeciation
-# Save event distribution data for visualization
-write.table(event_data, paste0(results_dir, "/event_distribution.csv"), sep=",", row.names=FALSE)
-
-
-
-event_data_long <- pivot_longer(event_data, 
-                              cols = c(cospeciation, transfer, duplication, loss), 
-                              names_to = "event", 
-                              values_to = "number_events")
-
-
-# Reorder event factor levels
+event_data$ratio <- event_data$transfer / event_data$cospeciation
+event_data_long <- pivot_longer(event_data, cols = c(cospeciation, transfer, duplication, loss),
+                                names_to = "event", values_to = "number_events")
 event_data_long$event <- factor(event_data_long$event, levels = c("cospeciation", "transfer", "duplication", "loss"))
 
-# Save event distribution data for visualization
-write.table(event_data_long, paste0(results_dir, "/event_distribution_long.csv"), sep=",", row.names=FALSE)
+write.table(event_data, paste0(results_dir, "event_distribution.csv"), sep = ",", row.names = FALSE)
+write.table(event_data_long, paste0(results_dir, "event_distribution_long.csv"), sep = ",", row.names = FALSE)
 
+#### Generate figures ----
+figures_dir <- paste0(output, "figures/")
+dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
-if(!dir.exists(paste0(output, "figures/"))){
-  dir.create(paste0(output, "figures/"), recursive = T)
-}
-
-
-svg(paste0(output, "figures/empress_event_distributions_significant.svg"), width = 7, height = 5)
-# significant reconciliations
-ggplot(event_data_long[event_data_long$signif == TRUE,], 
-       aes(x = event, y = number_events, 
-           group = interaction(cost_scheme, replicate),  # Group by both cost_scheme & replicate
-           color = cost_scheme)) +
-  xlab("") +
-  ylab("Number of events") +
-  geom_line(alpha = 0.6, size = 0.5) +  # Transparency for better visibility
+# Significant event distributions
+svg(paste0(figures_dir, "empress_event_distributions_significant.svg"), width = 7, height = 5)
+ggplot(event_data_long[event_data_long$signif == TRUE,], aes(x = event, y = number_events, group = interaction(cost_scheme, replicate), color = cost_scheme)) +
+  geom_line(alpha = 0.6, size = 0.5) +
   geom_hline(yintercept = 0) +
+  geom_boxplot(aes(group = event), fill = "gray80", color = "black", width = 0.1, outlier.shape = NA) +
   theme_minimal() +
-  scale_color_manual(values = c("#ba4a00", "#d68910", "#229954", "#2e86c1", "#7a1fa2")) +  # Ensure distinct colors for cost_schemes
-  theme(legend.position = "right") +
-  geom_boxplot(aes(group = event), fill = "gray80", color = "black", width = 0.1, outlier.shape = NA) +  # Gray boxplots with black borders
-  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1))
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
+  xlab("") + ylab("Number of events") +
+  scale_color_manual(values = c("#ba4a00", "#d68910", "#229954", "#2e86c1", "#7a1fa2"))
 dev.off()
 
-
-
-svg(paste0(output, "figures/empress_event_distributions_nonsignificant.svg"), width=7, height=5)
-# non-significant reconciliations
-ggplot(event_data_long[event_data_long$signif == FALSE,], 
-       aes(x = event, y = number_events, 
-           group = interaction(cost_scheme, replicate),  # Group by both cost_scheme & replicate
-           color = cost_scheme)) +
-  xlab("") +
-  ylab("Number of events") +
-  geom_line(alpha = 0.6, size = 0.5) +  # Transparency for better visibility
+# Non-significant event distributions
+svg(paste0(figures_dir, "empress_event_distributions_nonsignificant.svg"), width = 7, height = 5)
+ggplot(event_data_long[event_data_long$signif == FALSE,], aes(x = event, y = number_events, group = interaction(cost_scheme, replicate), color = cost_scheme)) +
+  geom_line(alpha = 0.6, size = 0.5) +
   geom_hline(yintercept = 0) +
+  geom_boxplot(aes(group = event), fill = "gray80", color = "black", width = 0.1, outlier.shape = NA) +
   theme_minimal() +
-  scale_color_manual(values = c("#ba4a00", "#d68910", "#229954", "#2e86c1", "#7a1fa2")) +  # Ensure distinct colors for cost_schemes
-  theme(legend.position = "right") +
-  geom_boxplot(aes(group = event), fill = "gray80", color = "black", width = 0.1, outlier.shape = NA) +  # Gray boxplots with black borders
-  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1))
+  theme(panel.border = element_rect(colour = "black", fill = NA, size = 1)) +
+  xlab("") + ylab("Number of events") +
+  scale_color_manual(values = c("#ba4a00", "#d68910", "#229954", "#2e86c1", "#7a1fa2"))
 dev.off()
 
-
-svg(paste0(output, "figures/empress_ratio_transfer_cosp.svg"), width=7, height=5)
-# ratio transfer/cospeciation
-ggplot(event_data, aes(y = ratio, x = cost_scheme, fill = signif)) +
+# Transfer/Cospeciation ratios
+svg(paste0(figures_dir, "empress_ratio_transfer_cosp.svg"), width = 7, height = 5)
+ggplot(event_data, aes(x = cost_scheme, y = ratio, fill = signif)) +
+  geom_violin(trim = TRUE, draw_quantiles = 0.5, alpha = 0.6, width = 1.3) +
+  geom_point(aes(color = signif), position = position_jitterdodge(jitter.width = 0.12, dodge.width = 1.3), size = 0.8, alpha = 0.5, show.legend = FALSE) +
   geom_hline(yintercept = 1) +
-  geom_violin(trim = TRUE, draw_quantiles = 0.5, alpha = 0.6, width = 1.3) +  # Slight transparency to see points
-  geom_point(aes(color = signif), position = position_jitterdodge(jitter.width = 0.12, 
-                                                                  dodge.width = 1.3), size = 0.8, alpha = 0.5, show.legend = FALSE) +  
   theme_bw() +
+  scale_y_continuous(trans = "sqrt", breaks = c(0, 0.25, 1, 3, 5, 9)) +
   xlab("Cost scheme") +
   ylab("Ratio transfers vs cospeciations") +
-  scale_y_continuous(trans = 'sqrt', breaks = c(0, 0.25, 1, 3, 5, 9)) +
-  scale_fill_manual(
-    values = c("TRUE" = "#1a5276", "FALSE" = "#b03a2e"), # Blue for significant, red for non-significant
-    labels = c("FALSE" = "Non-Significant", "TRUE" = "Significant")
-  ) +
-  scale_color_manual(
-    values = c("TRUE" = "black", "FALSE" = "black") # Match point colors to violin plots
-  ) +
+  scale_fill_manual(values = c("TRUE" = "#1a5276", "FALSE" = "#b03a2e")) +
   theme(legend.title = element_blank(), legend.position = "right")
 dev.off()
-
 
 
 

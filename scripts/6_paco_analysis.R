@@ -169,7 +169,7 @@ ggplot(null, aes(x = `(D[["shuffled"]])`)) +
 dev.off()
 
 #### ParaFit analysis ----
-z <- parafit(htree, ptree, int, nperm = 999, test.links = TRUE, seed = 123, correction = "cailliez")
+z <- parafit(htree, ptree, int, nperm = 10000, test.links = TRUE, seed = 123, correction = "cailliez")
 
 link_significance <- data.frame(z$link.table)
 link_significance$host_name <- rownames(int)[link_significance$Host]

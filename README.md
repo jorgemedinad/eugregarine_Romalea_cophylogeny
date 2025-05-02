@@ -86,20 +86,10 @@ install.packages(c("ape", "phytools", "paco", "ggplot2", "tidyr", "sf",
    - Execute scripts `01_prepare_occurrence_matrix.R` → `07_map_collecting_sites.R` in order.
    - Execute `04_run_empress.sh` separately under Linux/WSL for Empress reconciliations.
 
-4. **View and interpret outputs**  
-   - Figures saved in `output/figures/`
+4. **Output locations**  
+   - Raw figures saved in `output/figures/`
    - Empress results in `output/results_empress/`
    - PACo/ParaFit summaries in `output/paco/` and `output/parafit/`
    - Province assignments in `output/geographic_provinces/`
-
----
-
-### **Outputs Overview**
-
-- **Occurrence matrices** ready for PACo, ParaFit, and Empress
-- **Reconciliation outputs** under different cost schemes
-- **Link-specific cophylogenetic contributions** (PACo residuals and jackknife CIs)
-- **Significance of links** (ParaFit link p-values)
-- **Geographic maps** of host collecting sites and biogeographic regions
 
 ---

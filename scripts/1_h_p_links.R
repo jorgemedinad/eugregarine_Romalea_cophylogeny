@@ -29,6 +29,7 @@ library(tidyr)
 input <- "YOUR_PATH/input/"
 output <- "YOUR_PATH/output/"
 
+
 #### Load and prepare databases ----
 # Load FASTA sequences
 fasta.file <- readDNAStringSet(paste0(input, "fasta_sequences_gregarines/gregarines_from_taeniopoda_updated_unaligned.fasta"))
@@ -106,4 +107,4 @@ if (!dir.exists(paste0(output, "occurrence_matrix/"))) {
 
 saveRDS(occurrence_matrix_df, paste0(output, "occurrence_matrix/occurrence_matrix.rds"))
 write.csv(occurrence_matrix_df, paste0(output, "occurrence_matrix/occurrence_matrix.csv"))
-
+write.csv(merged.fasta.long, paste0(output, "occurrence_matrix/SSU_hp_relationships.csv"))

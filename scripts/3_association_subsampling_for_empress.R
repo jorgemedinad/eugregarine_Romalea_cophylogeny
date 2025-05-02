@@ -13,6 +13,7 @@
 #
 # Note:
 # - Change only `input` and `output` folder paths below.
+# - Results are saved into `/subsampled_matrix` subdirectory.
 #############################################################
 
 # Load required libraries

@@ -22,7 +22,7 @@
 # - ParaFit link significance results
 #
 # Notes:
-# - Set working directory and adjust `output` path for reproducibility.
+# - Only change `output` path for reproducibility.
 # - Figures and results are saved into `/figures`, `/paco`, and `/parafit` subdirectories.
 #############################################################
 
@@ -48,13 +48,13 @@ htree <- cophenetic(host_tree)
 #### PACo analysis ----
 D <- prepare_paco_data(htree, ptree, int)
 D <- add_pcoord(D, correction = "cailliez")
-D <- PACo(D, nperm = 10000, seed = 13, method = "r0", symmetric = TRUE, shuffled = TRUE)
+D <- PACo(D, nperm = 100000, seed = 13, method = "r0", symmetric = TRUE, shuffled = TRUE)
 D <- paco_links(D)
 
 # Residuals and jackknife contributions
 res <- residuals_paco(D$proc)
 res_sq <- res^2
-res_df <- data.frame(link = rownames(res), res = res, res_sq = res_sq, jack = D$jackknife)
+res_df <- data.frame(link = names(res), res = res, res_sq = res_sq, jack = D$jackknife)
 
 #### Jackknife Confidence Intervals ----
 HP.ones <- which(as.matrix(int) > 0, arr.ind = TRUE)
@@ -107,8 +107,17 @@ ggplot(plot_df, aes(x = reorder(link, jack), y = jack)) +
   geom_hline(yintercept = median(plot_df$res, na.rm = TRUE), linetype = "dashed", color = "red") +
   coord_cartesian(clip = "off") +
   theme_minimal() +
-  labs(x = "Host-parasite link", y = "Squared residuals (PACo contribution)")
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1, size = 13),
+    axis.title = element_text(size = 14),
+    plot.margin = margin(t = 10, r = 10, b = 50, l = 80)
+  ) +
+  labs(
+    x = "Host-parasite link",
+    y = "Squared residuals (PACo contribution)"
+  )
 dev.off()
+
 
 #### Tanglegram weighted by PACo residuals ----
 assoc <- data.frame(
@@ -120,7 +129,7 @@ weight <- (res^-2) / 70
 a <- cophylo(host_tree, parasite_tree, assoc, rotate = TRUE)
 
 svg(paste0(output, "figures/cophylogeny.svg"), width = 16, height = 17)
-plot(a, link.type = "curved", link.lwd = weight, link.col = make.transparent("blue", 0.5))
+plot(a, link.type = "curved", link.lwd = weight, link.lty="solid", link.col = make.transparent("blue", 0.5))
 dev.off()
 
 #### Specific analysis: Boliviana vs others ----
@@ -136,7 +145,7 @@ dat <- rbind(
   data.frame(cophy = noncophy, level = 'Other')
 )
 
-svg(paste0(output, "figures/BolivianaVsRest_boxplot.svg"), width = 16, height = 17)
+svg(paste0(output, "figures/BolivianaVsRest_boxplot.svg"), width = 6, height = 6)
 ggplot(dat, aes(x = level, y = cophy, fill = level)) +
   geom_boxplot(alpha = 0.85) +
   theme_bw() +
@@ -146,7 +155,7 @@ ggplot(dat, aes(x = level, y = cophy, fill = level)) +
 dev.off()
 
 #### Density plot: Boliviana residuals vs background ----
-svg(paste0(output, "figures/procrustes_residuals_Boliviana.svg"), width = 17, height = 10)
+svg(paste0(output, "figures/procrustes_residuals_Boliviana.svg"), width = 6, height = 5)
 ggplot(data.frame(res = noncophy), aes(x = res)) +
   geom_density(fill = 'grey70') +
   geom_vline(data = data.frame(res = cophy), aes(xintercept = res), color = 'darkorange1') +
@@ -159,8 +168,8 @@ dev.off()
 null <- as.data.frame(D$shuffled)
 m2 <- as.data.frame(D$gof$ss)
 
-svg(paste0(output, "figures/procrustes_residuals_significance.svg"), width = 15, height = 9)
-ggplot(null, aes(x = `(D[["shuffled"]])`)) +
+svg(paste0(output, "figures/procrustes_residuals_significance.svg"), width = 9, height = 5)
+ggplot(null, aes(x = D[["shuffled"]])) +
   geom_density(fill = 'grey70') +
   geom_vline(data = m2, aes(xintercept = `D$gof$ss`), col = 'darkorange1', linewidth = 1) +
   theme_bw() +

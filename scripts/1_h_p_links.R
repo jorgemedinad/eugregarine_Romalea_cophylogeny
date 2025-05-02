@@ -15,6 +15,7 @@
 #
 # Note:
 # - Change `input` and `output` folder paths.
+# - Figures and results are saved into `/occurrence_matrix` subdirectory.
 #############################################################
 
 # Load required libraries
@@ -89,7 +90,7 @@ occurrence_matrix_df <- as.data.frame.matrix(occurrence_matrix)
 # Rename rows with standardized gregarine names
 new.names.gregarines <- c(
   "Ataeniopoda_MK181531", "Amoebogregarina_7", "Amoebogregarina_8",
-  "Amoebogregarina_4", "Amoebogregarina_3", "Amoebogregarina_1",
+  "Amoebogregarina_3", "Amoebogregarina_1",
   "Amoebogregarina_6", "Amoebogregarina_5", "Amoebogregarina_2",
   "Boliviana_3", "Boliviana_1", "Boliviana_4", "Boliviana_2",
   "Coronoepimeritus_3", "Coronoepimeritus_2", "Coronoepimeritus_4",

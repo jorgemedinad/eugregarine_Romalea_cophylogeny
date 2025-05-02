@@ -1,0 +1,19 @@
+# Ignore the Scripts/ subdirectory
+Scripts/
+
+# Ignore R session files
+.RData
+.Rhistory
+
+# Optional: Also ignore common R/RStudio and temporary files
+.Rproj.user/
+*.Rproj
+*.Ruserdata
+*.log
+*.aux
+*.out
+*.toc
+
+# Optional: Ignore system files
+.DS_Store
+Thumbs.db

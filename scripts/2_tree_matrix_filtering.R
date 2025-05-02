@@ -14,6 +14,7 @@
 #
 # Note:
 # - Change only `input` and `output` folder paths below.
+# - Figures and results are saved into `/occurrence_matrix`, and `/trimmed_tree` subdirectories.
 #############################################################
 
 # Load required libraries
@@ -28,12 +29,9 @@ output <- "YOUR_PATH/output/"
 occurrence <- readRDS(paste0(output, "occurrence_matrix/occurrence_matrix.rds"))
 occurrence <- t(as.matrix(occurrence))
 
-# Remove duplicated parasite sequence
-occurrence <- occurrence[, colnames(occurrence) != "Amoebogregarina_4"]
-
 # Load phylogenetic trees
-gregarine.tree <- read.nexus(paste0(input, "trees/good/gregarines_dummy_dated.tre"))
-romalea.tree <- read.nexus(paste0(input, "trees/good/romalea_dummy_dated.tre"))
+gregarine.tree <- read.nexus(paste0(input, "trees/gregarines_dummy_dated.tre"))
+romalea.tree <- read.nexus(paste0(input, "trees/romalea_dummy_dated.tre"))
 
 # Optional: visualize trees
 # par(mar = c(0, 0, 0, 0), oma = c(0, 0, 0, 0))
@@ -52,22 +50,15 @@ gregarine.tree.trim <- drop.tip(gregarine.tree, trim.gregarines)
 #### Rename host tree tips ----
 new.names.h.tree <- c(
   "microptera_3", "microptera_2", "microptera_1", "microptera_4",
-  "microptera_5", "microptera_6", "auricornis_1", "auricornis_2",
+  "microptera_5", "auricornis_1", "auricornis_2",
   "centurio", "eques", "obscura_1", "obscura_2", "picticornis",
   "reticulata", "tamaulipensis", "varipennis", "Xyleus"
 )
 
 romalea.tree.trim$tip.label <- new.names.h.tree
 
-# Drop specific problematic sample
-romalea.tree.trim <- drop.tip(romalea.tree.trim, "microptera_5")
-
 # Adjust occurrence matrix accordingly
 rownames(occurrence) <- new.names.h.tree
-occurrence <- occurrence[rownames(occurrence) != "microptera_5", ]
-
-# Remove wrong link
-occurrence["reticulata", "Boliviana_1"] <- 0
 
 #### Create output directories if needed ----
 if (!dir.exists(paste0(output, "occurrence_matrix/"))) {
@@ -79,7 +70,7 @@ if (!dir.exists(paste0(output, "trimmed_tree/"))) {
 
 #### Save processed objects ----
 # Occurrence matrix
-saveRDS(occurrence, paste0(output, "occurrence_matrix/occurrence_matrix_cophylogeny.rds"))
+saveRDS(occurrence, paste0(output, "occurrence_matrix/occurrence_matrix_cophylogeny_renamed.rds"))
 write.csv(occurrence, paste0(output, "occurrence_matrix/occurrence_matrix_cophylogeny_renamed.csv"))
 
 # Trimmed trees

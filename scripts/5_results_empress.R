@@ -10,6 +10,10 @@
 # - Computes event counts, time inconsistencies, and ratios
 # - Saves summary tables
 # - Generates event and ratio visualizations
+#
+#Notes:
+# - Set working directory and adjust `output` path for reproducibility.
+# - Figures and results are saved into `/figures`, and `/results_empress` subdirectories.
 #############################################################
 
 # Load required libraries
@@ -19,6 +23,7 @@ library(tidyr)
 
 #### Define paths ----
 output <- "YOUR_PATH/output/"
+
 results_dir <- paste0(output, "results_empress/")
 dir.create(results_dir, showWarnings = FALSE, recursive = TRUE)
 # setwd(results_dir)  # Optional: usually better to work without changing working directory
@@ -178,19 +183,20 @@ ggplot(event_data_long[event_data_long$signif == FALSE,], aes(x = event, y = num
   scale_color_manual(values = c("#ba4a00", "#d68910", "#229954", "#2e86c1", "#7a1fa2"))
 dev.off()
 
+
 # Transfer/Cospeciation ratios
 svg(paste0(figures_dir, "empress_ratio_transfer_cosp.svg"), width = 7, height = 5)
 ggplot(event_data, aes(x = cost_scheme, y = ratio, fill = signif)) +
+  geom_hline(yintercept = 1) +
   geom_violin(trim = TRUE, draw_quantiles = 0.5, alpha = 0.6, width = 1.3) +
   geom_point(aes(color = signif), position = position_jitterdodge(jitter.width = 0.12, dodge.width = 1.3), size = 0.8, alpha = 0.5, show.legend = FALSE) +
-  geom_hline(yintercept = 1) +
   theme_bw() +
   scale_y_continuous(trans = "sqrt", breaks = c(0, 0.25, 1, 3, 5, 9)) +
   xlab("Cost scheme") +
   ylab("Ratio transfers vs cospeciations") +
-  scale_fill_manual(values = c("TRUE" = "#1a5276", "FALSE" = "#b03a2e")) +
+  scale_fill_manual(values = c("TRUE" = "#1a5276", "FALSE" = "#b03a2e"),
+                    labels = c("FALSE" = "Non-Significant", "TRUE" = "Significant")) +
+  scale_color_manual(values = c("TRUE" = "black", "FALSE" = "black")) +
   theme(legend.title = element_blank(), legend.position = "right")
 dev.off()
-
-
 

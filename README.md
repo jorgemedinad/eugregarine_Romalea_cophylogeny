@@ -20,10 +20,12 @@ The project integrates event-based reconciliation (eMPRess) and global-fit metho
 ### **Directory Structure**
 ```
 .
-├── input/                   # Input files: occurrence matrices, phylogenies, collecting data, shapefiles
-├── output/                  # All generated outputs: figures, Empress results, PACo/ParaFit analyses
-├── scripts/                 # All R and bash scripts organized by analysis step
-├── README.md                 # Project documentation
+├── input/                         # Input files: occurrence matrices, phylogenies, collecting data, shapefiles
+├── output/                        # All generated outputs: raw figures, Empress results, PACo/ParaFit analyses
+├── scripts/                       # All R and bash scripts organized by analysis step
+├── manuscript_plates/             # Paper figures
+├── supplementary_information/     # All supplementary figures and tables for the manuscript
+├── README.md                      # Project documentation
 ```
 
 ---
